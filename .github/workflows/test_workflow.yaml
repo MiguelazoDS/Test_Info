@@ -1,0 +1,58 @@
+name: Example
+run-name: ${{ github.actor }}-${{ github.repository }}
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+  repository_dispatch:
+
+env:
+  TOOL_DIR: tools
+  TOOL_FILE_NAME: tools
+  FOREIGN_REPO: Test_Tool
+
+jobs:
+  scheduled:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        item: ["test"]
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: sudo apt update -y && sudo apt install jq
+
+      - name: Get run-id foreign repo
+        id: run_id_info
+        run: |
+          #run_id=$(curl -u ${{ github.actor }}:${{ secrets.Test_GHPAT }} "https://api.github.com/repos/${{ github.actor }}/${{ env.FOREIGN_REPO }}/actions/artifacts" | jq '.artifacts[0].workflow_run.id')
+          run_id=$(curl -u ${{ github.actor }}:${{ secrets.GITHUB_TOKEN }} "https://api.github.com/repos/${{ github.actor }}/${{ env.FOREIGN_REPO }}/actions/artifacts" | jq '.artifacts[0].workflow_run.id')
+          echo "RUN_ID=${run_id}" >> $GITHUB_OUTPUT
+
+      - name: Download tools
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.TOOL_FILE_NAME }}
+          #github-token: ${{ secrets.Test_GHPAT }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: MiguelazoDS/Test_Tool
+          #run-id: 11331031784
+          run-id: ${{ steps.run_id_info.outputs.RUN_ID }}
+
+      - name: Decompress Tools
+        run: |
+          tar xfv ${{ env.TOOL_FILE_NAME }}.tar.xz
+
+      - name: Use tools
+        run: |
+          echo "Execute test tool 1"
+          ./tool1/tool1
+          echo "Execute test tool 2"
+          ./tool2/tool2
+
