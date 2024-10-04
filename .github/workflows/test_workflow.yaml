@@ -1,0 +1,43 @@
+name: Example
+run-name: ${{ github.actor }}-${{ github.base_ref }}
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+  repository_dispatch:
+
+jobs:
+  scheduled:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        item: ["test"]
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Checkout another repo
+        uses: actions/checkout@v3
+        with:
+          path: Test_Tool
+          repository: MiguelazoDS/Test_Tool
+          fetch-depth: 0
+
+      - name: Compile Tool
+        run: |
+          echo "Current path"
+          pwd
+          echo "Dirs"
+          ls
+          cd Test_Tool
+          mkdir build && cd build
+          cmake .. && make -j$(nproc)
+
+      - name: Use Tool
+        run: |
+          ./Test_Tool/build/tool/tool
+
